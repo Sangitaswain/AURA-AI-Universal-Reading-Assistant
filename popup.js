@@ -163,31 +163,60 @@ async function checkModelAvailability() {
  */
 async function checkSelectedContent() {
   try {
-    // Get current active tab
+    // First try to get content from background script (faster)
+    const backgroundResponse = await chrome.runtime.sendMessage({
+      type: 'GET_SELECTED_CONTENT'
+    });
+    
+    if (backgroundResponse && backgroundResponse.success && backgroundResponse.content) {
+      currentContent = backgroundResponse.content;
+      displaySelectedContent(currentContent);
+      enableActionButtons(currentContent.type);
+      return;
+    }
+    
+    // Fallback: try to get content directly from content script
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     
     if (!tab) {
       throw new Error('No active tab found');
     }
     
-    // Send message to content script to get selected content
-    const response = await chrome.tabs.sendMessage(tab.id, { 
-      type: 'GET_SELECTED_CONTENT' 
-    });
-    
-    if (response && response.content) {
-      currentContent = response.content;
-      displaySelectedContent(currentContent);
-      enableActionButtons(currentContent.type);
-    } else {
-      // No content selected
+    // Check if content script is ready
+    try {
+      const pingResponse = await chrome.tabs.sendMessage(tab.id, { type: 'PING' });
+      
+      if (pingResponse && pingResponse.success) {
+        // Content script is ready, get selected content
+        const response = await chrome.tabs.sendMessage(tab.id, { 
+          type: 'GET_SELECTED_CONTENT' 
+        });
+        
+        if (response && response.success && response.content) {
+          currentContent = response.content;
+          displaySelectedContent(currentContent);
+          enableActionButtons(currentContent.type);
+        } else {
+          // No content selected
+          displayNoContent();
+          disableActionButtons();
+        }
+      } else {
+        throw new Error('Content script not ready');
+      }
+    } catch (contentScriptError) {
+      console.log('Content script not available:', contentScriptError.message);
       displayNoContent();
       disableActionButtons();
+      
+      // Show helpful message for content script issues
+      if (tab.url && (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://'))) {
+        showError('AURA cannot run on Chrome internal pages. Please try on a regular webpage.');
+      }
     }
     
   } catch (error) {
     console.error('Failed to check selected content:', error);
-    // This is expected if content script isn't injected yet
     displayNoContent();
     disableActionButtons();
   }
@@ -197,21 +226,52 @@ async function checkSelectedContent() {
  * Display selected content in the popup
  */
 function displaySelectedContent(content) {
-  const { type, text, imageUrl, alt } = content;
+  const { type, text, url: imageUrl, alt, width, height, elementType } = content;
   
   if (type === 'text') {
+    const displayText = text.length > 200 ? text.substring(0, 200) + '...' : text;
+    const wordCount = text.split(/\s+/).length;
+    
     elements.contentDisplay.innerHTML = `
       <div class="selected-text">
-        <strong>Selected Text:</strong>
-        <p>${escapeHtml(text.substring(0, 200))}${text.length > 200 ? '...' : ''}</p>
+        <div class="content-header">
+          <strong>📝 Selected Text</strong>
+          <span class="content-meta">${wordCount} words</span>
+        </div>
+        <div class="content-preview">
+          ${escapeHtml(displayText)}
+        </div>
+        ${content.contextBefore || content.contextAfter ? `
+          <div class="content-context">
+            <small><em>Context available for better AI processing</em></small>
+          </div>
+        ` : ''}
       </div>
     `;
   } else if (type === 'image') {
+    const dimensions = width && height ? `${width}×${height}` : 'Unknown size';
+    
     elements.contentDisplay.innerHTML = `
       <div class="selected-image">
-        <strong>Selected Image:</strong>
-        <img src="${imageUrl}" alt="${escapeHtml(alt || 'Selected image')}" style="max-width: 100%; height: auto; margin-top: 8px; border-radius: 4px;">
-        ${alt ? `<p><em>Current alt text: ${escapeHtml(alt)}</em></p>` : '<p><em>No alt text available</em></p>'}
+        <div class="content-header">
+          <strong>🖼️ Selected Image</strong>
+          <span class="content-meta">${dimensions}</span>
+        </div>
+        <div class="image-preview">
+          <img src="${imageUrl}" alt="${escapeHtml(alt || 'Selected image')}" 
+               style="max-width: 100%; height: auto; margin-top: 8px; border-radius: 4px; border: 1px solid #e9ecef;">
+        </div>
+        <div class="image-info">
+          ${alt ? `
+            <div class="current-alt">
+              <small><strong>Current alt text:</strong> ${escapeHtml(alt)}</small>
+            </div>
+          ` : `
+            <div class="no-alt">
+              <small><em>⚠️ No alt text available - perfect for AURA to help!</em></small>
+            </div>
+          `}
+        </div>
       </div>
     `;
   }

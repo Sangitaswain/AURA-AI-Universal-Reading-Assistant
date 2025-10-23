@@ -95,6 +95,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   switch (message.type) {
     case 'CONTENT_SELECTED':
       handleContentSelected(message.data, sender);
+      sendResponse({ success: true });
+      break;
+      
+    case 'GET_SELECTED_CONTENT':
+      handleGetSelectedContent(sender, sendResponse);
+      break;
+      
+    case 'OPEN_POPUP_WITH_CONTENT':
+      handleOpenPopupWithContent(message.data, sender);
+      sendResponse({ success: true });
       break;
       
     case 'CHECK_MODEL_STATUS':
@@ -188,8 +198,32 @@ async function initializeStorage() {
 function handleContentSelected(content, sender) {
   console.log('Content selected:', content);
   
-  // Store the selected content for popup access
-  // This will be expanded in later tasks
+  // Store the selected content with tab information
+  if (sender.tab) {
+    const tabId = sender.tab.id;
+    
+    // Store in memory for popup access
+    if (!globalThis.selectedContentByTab) {
+      globalThis.selectedContentByTab = new Map();
+    }
+    
+    globalThis.selectedContentByTab.set(tabId, {
+      content: content,
+      timestamp: Date.now(),
+      tabId: tabId,
+      url: sender.tab.url
+    });
+    
+    // Clean up old selections (older than 5 minutes)
+    const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+    for (const [id, data] of globalThis.selectedContentByTab.entries()) {
+      if (data.timestamp < fiveMinutesAgo) {
+        globalThis.selectedContentByTab.delete(id);
+      }
+    }
+    
+    console.log(`Stored ${content.type} selection for tab ${tabId}`);
+  }
 }
 
 /**
@@ -281,6 +315,96 @@ async function handleSetStorage(data, sendResponse) {
       success: false,
       error: error.message
     });
+  }
+}
+
+/**
+ * Handle get selected content requests from popup
+ */
+async function handleGetSelectedContent(sender, sendResponse) {
+  try {
+    // Get current active tab
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    
+    if (!tab) {
+      sendResponse({
+        success: false,
+        error: 'No active tab found'
+      });
+      return;
+    }
+    
+    // Check if we have stored content for this tab
+    if (globalThis.selectedContentByTab && globalThis.selectedContentByTab.has(tab.id)) {
+      const storedData = globalThis.selectedContentByTab.get(tab.id);
+      
+      // Check if content is still fresh (less than 5 minutes old)
+      const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+      if (storedData.timestamp > fiveMinutesAgo) {
+        sendResponse({
+          success: true,
+          content: storedData.content
+        });
+        return;
+      } else {
+        // Remove stale content
+        globalThis.selectedContentByTab.delete(tab.id);
+      }
+    }
+    
+    // Try to get fresh content from content script
+    try {
+      const response = await chrome.tabs.sendMessage(tab.id, { 
+        type: 'GET_SELECTED_CONTENT' 
+      });
+      
+      sendResponse({
+        success: true,
+        content: response?.content || null
+      });
+    } catch (error) {
+      console.log('Content script not ready, returning no content');
+      sendResponse({
+        success: true,
+        content: null
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error getting selected content:', error);
+    sendResponse({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+/**
+ * Handle open popup with content requests
+ */
+async function handleOpenPopupWithContent(content, sender) {
+  try {
+    console.log('Request to open popup with content:', content);
+    
+    // Store the content for popup access
+    if (sender.tab) {
+      if (!globalThis.selectedContentByTab) {
+        globalThis.selectedContentByTab = new Map();
+      }
+      
+      globalThis.selectedContentByTab.set(sender.tab.id, {
+        content: content,
+        timestamp: Date.now(),
+        tabId: sender.tab.id,
+        url: sender.tab.url
+      });
+    }
+    
+    // Note: We can't programmatically open the popup, but the content is now available
+    // when the user clicks the extension icon
+    
+  } catch (error) {
+    console.error('Error handling open popup request:', error);
   }
 }
 

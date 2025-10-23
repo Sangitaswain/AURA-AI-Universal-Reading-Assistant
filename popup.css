@@ -163,6 +163,65 @@ main {
   margin: 0;
 }
 
+/* Enhanced Content Display */
+.content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.content-meta {
+  font-size: 11px;
+  color: #6c757d;
+  background-color: #e9ecef;
+  padding: 2px 6px;
+  border-radius: 12px;
+}
+
+.content-preview {
+  margin-bottom: 8px;
+  line-height: 1.5;
+  color: #333;
+}
+
+.content-context {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid #e9ecef;
+}
+
+.content-context small {
+  color: #28a745;
+  font-size: 11px;
+}
+
+/* Image Display */
+.image-preview {
+  text-align: center;
+}
+
+.image-info {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e9ecef;
+}
+
+.current-alt {
+  color: #28a745;
+}
+
+.no-alt {
+  color: #ffc107;
+}
+
+.image-info small {
+  font-size: 11px;
+  line-height: 1.3;
+}
+
 /* Action Buttons */
 .action-buttons {
   display: grid;

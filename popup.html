@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AURA - AI Universal Reading Assistant</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <!-- Skip link for keyboard navigation -->
+  <a href="#main-content" class="skip-link" tabindex="1">Skip to main content</a>
+  
+  <header role="banner">
+    <h1 id="extension-title">
+      <span class="icon" aria-hidden="true">🧠</span>
+      AURA
+    </h1>
+    <div id="model-status" class="status-indicator" role="status" aria-live="polite">
+      <span id="status-text">Checking AI model...</span>
+      <div id="status-icon" class="status-icon" aria-hidden="true"></div>
+    </div>
+  </header>
+
+  <main id="main-content" role="main">
+    <!-- Privacy Notice Section -->
+    <section id="privacy-notice" class="privacy-section" aria-labelledby="privacy-heading">
+      <h2 id="privacy-heading" class="sr-only">Privacy Information</h2>
+      <div class="privacy-content">
+        <p class="privacy-text">
+          <span class="privacy-icon" aria-hidden="true">🔒</span>
+          All processing happens on your device. Your data never leaves your computer.
+        </p>
+      </div>
+    </section>
+
+    <!-- Content Display Area -->
+    <section id="content-section" class="content-area" aria-labelledby="content-heading">
+      <h2 id="content-heading" class="sr-only">Selected Content</h2>
+      
+      <!-- Selected Text/Image Display -->
+      <div id="selected-content" class="selected-content" role="region" aria-labelledby="selected-content-label">
+        <h3 id="selected-content-label" class="content-label">Selected Content</h3>
+        <div id="content-display" class="content-display" aria-live="polite">
+          <p class="no-content">No content selected. Highlight text or right-click an image on any webpage.</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div id="action-buttons" class="action-buttons" role="group" aria-labelledby="actions-heading">
+        <h3 id="actions-heading" class="sr-only">Available Actions</h3>
+        
+        <button id="summarize-btn" class="action-btn" type="button" disabled aria-describedby="summarize-desc">
+          <span class="btn-icon" aria-hidden="true">📝</span>
+          <span class="btn-text">Summarize</span>
+        </button>
+        <div id="summarize-desc" class="btn-description sr-only">Generate a 3-bullet point summary of selected text</div>
+        
+        <button id="simplify-btn" class="action-btn" type="button" disabled aria-describedby="simplify-desc">
+          <span class="btn-icon" aria-hidden="true">✍️</span>
+          <span class="btn-text">Explain Like I'm 5</span>
+        </button>
+        <div id="simplify-desc" class="btn-description sr-only">Rewrite text in simple, easy-to-understand language</div>
+        
+        <button id="describe-btn" class="action-btn" type="button" disabled aria-describedby="describe-desc">
+          <span class="btn-icon" aria-hidden="true">🖼️</span>
+          <span class="btn-text">Describe Image</span>
+        </button>
+        <div id="describe-desc" class="btn-description sr-only">Generate alt-text and detailed description for images</div>
+        
+        <button id="translate-btn" class="action-btn" type="button" disabled aria-describedby="translate-desc">
+          <span class="btn-icon" aria-hidden="true">🌍</span>
+          <span class="btn-text">Translate</span>
+        </button>
+        <div id="translate-desc" class="btn-description sr-only">Translate content to your preferred language</div>
+      </div>
+    </section>
+
+    <!-- Results Display Area -->
+    <section id="results-section" class="results-area hidden" aria-labelledby="results-heading">
+      <h2 id="results-heading" class="results-title">Results</h2>
+      
+      <div id="results-content" class="results-content" role="region" aria-live="polite">
+        <!-- Results will be dynamically inserted here -->
+      </div>
+
+      <!-- Audio Controls -->
+      <div id="audio-controls" class="audio-controls hidden" role="group" aria-labelledby="audio-heading">
+        <h3 id="audio-heading" class="sr-only">Audio Controls</h3>
+        
+        <button id="play-audio-btn" class="audio-btn" type="button" aria-describedby="play-desc">
+          <span class="btn-icon" aria-hidden="true">🔊</span>
+          <span class="btn-text">Read Aloud</span>
+        </button>
+        <div id="play-desc" class="btn-description sr-only">Listen to the generated content</div>
+        
+        <button id="stop-audio-btn" class="audio-btn hidden" type="button" aria-describedby="stop-desc">
+          <span class="btn-icon" aria-hidden="true">⏹️</span>
+          <span class="btn-text">Stop</span>
+        </button>
+        <div id="stop-desc" class="btn-description sr-only">Stop audio playback</div>
+      </div>
+
+      <!-- Save Controls -->
+      <div id="save-controls" class="save-controls" role="group" aria-labelledby="save-heading">
+        <h3 id="save-heading" class="sr-only">Save Options</h3>
+        
+        <button id="save-btn" class="save-btn" type="button" aria-describedby="save-desc">
+          <span class="btn-icon" aria-hidden="true">💾</span>
+          <span class="btn-text">Save Result</span>
+        </button>
+        <div id="save-desc" class="btn-description sr-only">Save this result for later reference</div>
+      </div>
+    </section>
+
+    <!-- Loading Indicator -->
+    <div id="loading-indicator" class="loading-indicator hidden" role="status" aria-live="assertive">
+      <div class="spinner" aria-hidden="true"></div>
+      <span id="loading-text" class="loading-text">Processing with AI...</span>
+    </div>
+
+    <!-- Error Display -->
+    <div id="error-display" class="error-display hidden" role="alert" aria-live="assertive">
+      <div class="error-content">
+        <span class="error-icon" aria-hidden="true">⚠️</span>
+        <span id="error-message" class="error-message"></span>
+        <button id="retry-btn" class="retry-btn" type="button">Try Again</button>
+      </div>
+    </div>
+  </main>
+
+  <footer role="contentinfo">
+    <div class="footer-content">
+      <button id="settings-btn" class="footer-btn" type="button" aria-describedby="settings-desc">
+        <span class="btn-icon" aria-hidden="true">⚙️</span>
+        <span class="btn-text">Settings</span>
+      </button>
+      <div id="settings-desc" class="btn-description sr-only">Open extension settings</div>
+      
+      <button id="help-btn" class="footer-btn" type="button" aria-describedby="help-desc">
+        <span class="btn-icon" aria-hidden="true">❓</span>
+        <span class="btn-text">Help</span>
+      </button>
+      <div id="help-desc" class="btn-description sr-only">Get help and usage instructions</div>
+    </div>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>
